@@ -35,14 +35,14 @@ merged_video_path = "output_with_audio.mp4"
 sample_rate = 22050
 video_duration = 15  # Durée minimale souhaitée en secondes pour la vidéo (pour le redémarrage)
 VIDEO_FPS = 60.0 # Fréquence d'images vidéo explicitement définie pour la synchronisation
-clsm = ['Coldplay - Viva La Vida.mid', 'The Legend of Zelda Ocarina of Time - Song of Storms.mid', 'Tetris - Tetris Main Theme.mid', 'The-Final-Countdown.mid', 'Never-Gonna-Give-You-Up-3.mid']
+clsm = ['melodie.mid', 'Coldplay - Viva La Vida.mid', 'Fur Elise.mid', 'Jasper Folks - River Flows in You.mid', 'Alice Deejay - Better Off Alone.mid']
 print(f"{len(clsm)} fichiers midi")
 for i in range(len(clsm)):
     if os.path.exists(clsm[i]):
         print(f"fichier midi {i + 1} touvé")
     else:
         print(f"fichier midi {i + 1 } manquant")
-midi_file = mido.MidiFile(f'/home/augustin/Téléchargements/{random.choice(clsm)}') # Sélectionne un fichier MIDI aléatoire parmi ceux de clsm
+midi_file = mido.MidiFile(f'{random.choice(clsm)}') # Sélectionne un fichier MIDI aléatoire parmi ceux de clsm
 audio_events = [] # Nouvelle liste pour stocker les événements audio
 
 # --- Global State ---
@@ -51,17 +51,14 @@ color_speed = 0.01
 exit_timer_start = None
 active_balls = []
 frozen_balls_positions = [] # Réintroduit pour stocker les balles gelées
-current_note = None
+current_note = None # Plus utilisé pour le note_off MIDI, mais conservé pour la structure
 frame_count = 0 # Variable globale pour suivre le nombre d'images enregistrées
 ball_escaped_time = None # Nouvelle variable pour le temps d'échappement de la balle
-
-
-
 
 # --- Initialization ---
 print("Initializing Pygame and peripherals...")
 pygame.init()
-pygame.mixer.init(frequency=sample_rate, size=-16, channels=2, buffer=512)
+# pygame.mixer.init(frequency=sample_rate, size=-16, channels=2, buffer=512) # Supprimé car plus besoin de sortie audio locale
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Bouncing Balls with Moving Hole")
 clock = pygame.time.Clock()
@@ -79,20 +76,18 @@ if recording:
     video_writer = cv2.VideoWriter(final_video_path, fourcc, VIDEO_FPS, (WIDTH, HEIGHT)) # Utilise VIDEO_FPS ici
     print(f"Video recording started. Output will be: {final_video_path}")
 
-# Initialise Pygame MIDI
+# Initialise Pygame MIDI - La sortie MIDI physique est désactivée
+# Le bloc try-except pour pygame.midi.init() est supprimé car nous ne l'utilisons plus pour la sortie physique.
+midi_enabled = False # Désactive explicitement la sortie MIDI physique
+notes = []
+note_index = 0
 try:
-    pygame.midi.init()
-    output_id = pygame.midi.get_default_output_id()
-    midi_out = pygame.midi.Output(output_id)
+    # Charger le fichier MIDI pour extraire les notes, même si la sortie MIDI est désactivée)
     notes = [(msg.note, msg.velocity) for msg in midi_file if msg.type == 'note_on' and msg.velocity > 0]
-    note_index = 0
-    midi_enabled = True
-    print(f"MIDI initialized successfully with {len(notes)} notes.")
+    print(f"MIDI file loaded successfully with {len(notes)} notes. Physical MIDI output is disabled.")
 except Exception as e:
-    print(f"Could not initialize MIDI. Sound will be generated but not sent to MIDI device. Error: {e}")
-    midi_enabled = False
-    notes = []
-    note_index = 0
+    print(f"Could not load MIDI file. No notes will be generated. Error: {e}")
+
 
 def play_midi_note():
     """Joue la prochaine note MIDI et enregistre son événement audio pour un rendu ultérieur.
@@ -104,19 +99,21 @@ def play_midi_note():
     try:
         note, velocity = notes[note_index]
         
-        # Joue la note sur le périphérique MIDI si activé
-        if midi_enabled:
-            midi_out.note_on(note, velocity)
-            current_note = (note, velocity)
-            pygame.time.set_timer(pygame.USEREVENT + 1, 300, True) # Planifie le note_off
+        # La sortie MIDI physique est désactivée, donc ces lignes sont commentées ou supprimées
+        # if midi_enabled:
+        #     midi_out.note_on(note, velocity)
+        #     current_note = (note, velocity)
+        #     pygame.time.set_timer(pygame.USEREVENT + 1, 300, True) # Schedule note_off
 
         note_index = (note_index + 1) % len(notes)
 
-        # Enregistre l'événement audio pour un rendu ultérieur
+        # Enregistre l'événement audio pour un rendu ultérieur (toujours actif pour l'enregistrement vidéo)
         if recording:
             frequency = 440 * (2 ** ((note - 69) / 12))
             duration_s = 0.3  # Durée de la note en secondes
             amplitude = (velocity / 127.0) * 0.5 # Amplitude basée sur la vélocité
+
+            # Calcule le temps de début de la note basé sur les images enregistrées pour la synchronisation
             audio_start_frame_offset = 1 # Décalage en nombre d'images (vous pouvez ajuster cette valeur)
             start_time_s = (frame_count + audio_start_frame_offset) / VIDEO_FPS 
             audio_events.append({
@@ -126,13 +123,13 @@ def play_midi_note():
                 'amplitude': amplitude
             })
 
-            # Joue le son pour un retour immédiat en utilisant pygame.mixer
-            num_frames_mixer = int(duration_s * sample_rate)
-            t_mixer = np.linspace(0., duration_s, num_frames_mixer, endpoint=False)
-            wave_mixer = np.sin(2 * np.pi * frequency * t_mixer) * amplitude
-            stereo_wave_mixer = np.column_stack((wave_mixer, wave_mixer)).astype(np.float32)
-            sound = pygame.sndarray.make_sound((stereo_wave_mixer * 32767).astype(np.int16))
-            sound.play()
+            # La lecture du son pour un retour immédiat via pygame.mixer est supprimée
+            # num_frames_mixer = int(duration_s * sample_rate)
+            # t_mixer = np.linspace(0., duration_s, num_frames_mixer, endpoint=False)
+            # wave_mixer = np.sin(2 * np.pi * frequency * t_mixer) * amplitude
+            # stereo_wave_mixer = np.column_stack((wave_mixer, wave_mixer)).astype(np.float32)
+            # sound = pygame.sndarray.make_sound((stereo_wave_mixer * 32767).astype(np.int16))
+            # sound.play()
 
         return note, velocity
     except Exception as e:
@@ -332,7 +329,7 @@ def reflect_ball_from_boundary(ball):
 def update_ball_state(ball):
     # Si la balle s'est échappée, applique juste la physique et saute les vérifications de collision
     if ball['escaped']:
-        ball['vel'][1] += GRAVITY # Applique toujours la gravité
+        ball['vel'][1] += GRAVITY # Applique toujours la gravity
         ball['pos'][0] += ball['vel'][0]
         ball['pos'][1] += ball['vel'][1]
         return # Saute les autres vérifications de collision pour les balles échappées
@@ -342,7 +339,7 @@ def update_ball_state(ball):
         return
 
     # Applique la physique pour les balles actives (non échappées, non gelées)
-    ball['vel'][1] += GRAVITY # Correction ici: suppression de l'apostrophe
+    ball['vel'][1] += GRAVITY
     ball['pos'][0] += ball['vel'][0]
     ball['pos'][1] += ball['vel'][1]
 
@@ -407,12 +404,6 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        elif event.type == pygame.USEREVENT + 1 and midi_enabled and current_note:
-            try:
-                midi_out.note_off(current_note[0], current_note[1])
-                current_note = None
-            except Exception as e:
-                print(f"Error sending note_off: {e}")
 
     # Met à jour l'état
     hole_angle = (hole_angle + hole_speed) % (2 * math.pi)
@@ -424,7 +415,7 @@ while running:
 
     # Fait apparaître de nouvelles balles si le nombre de balles actives (non gelées et non échappées) est inférieur à BALL_COUNT
     # ET si aucune balle ne s'est encore échappée.
-    if ball_escaped_time is None: # Nouvelle condition ici
+    if ball_escaped_time is None: # Si aucune balle n'est échappée, on peut faire apparaître de nouvelles balles
         num_active_and_moving_balls = sum(1 for ball in active_balls if not ball['is_frozen'] and not ball['escaped'])
         while num_active_and_moving_balls < BALL_COUNT:
             active_balls.append(spawn_ball())
@@ -458,9 +449,9 @@ while running:
         # Si la balle est échappée ou gelée, elle est gérée par les autres boucles de dessin ou ignorée ici.
 
     # Le texte reste visible quelle que soit l'animation des cercles
-    text_surface = font.render(th, True, (255, 255, 255))
+    text_surface = font.render("Si la balle s'échappe,", True, (255, 255, 255))
     screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, 50))
-    text_surface2 = font.render(tb, True, (255, 255, 255))
+    text_surface2 = font.render("la vidéo sera enregistrée", True, (255, 255, 255))
     screen.blit(text_surface2, (WIDTH // 2 - text_surface2.get_width() // 2, 100))
 
     pygame.display.flip()
@@ -503,9 +494,6 @@ else:
         except OSError as e:
             print(f"Error removing temporary file: {e}")
 
-    if midi_enabled:
-        midi_out.close()
-        pygame.midi.quit()
-
+    # Les appels à pygame.midi.quit() et midi_out.close() sont supprimés car MIDI n'est plus utilisé.
     pygame.quit()
     sys.exit()
