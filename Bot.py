@@ -21,6 +21,11 @@ BALL_FREEZE_TIME_MS = 4000 # Temps après lequel une balle se fige (4 secondes)
 HOLE_ANGLE_WIDTH = math.radians(20)
 hole_angle = 250
 hole_speed = 0.05
+clsth = ["If the ball escapes,", "This one made my ps crash", "The ball have", "If the ball escapes"]
+clstb = ["you have to subscribe", "pls subscribe", "4 seconds to escape", "you're gay bro"]
+t = random.randint(0, (len(clsth)-1) )
+th = clsth[t]
+tb = clstb[t]
 
 # --- Video & Audio Settings ---
 recording = True
@@ -30,9 +35,14 @@ merged_video_path = "output_with_audio.mp4"
 sample_rate = 22050
 video_duration = 15  # Durée minimale souhaitée en secondes pour la vidéo (pour le redémarrage)
 VIDEO_FPS = 60.0 # Fréquence d'images vidéo explicitement définie pour la synchronisation
-
-# Le tampon audio principal n'est plus pré-alloué ici, mais généré à la fin.
-# Nous allons stocker les événements audio au lieu des échantillons bruts.
+clsm = ['Coldplay - Viva La Vida.mid', 'The Legend of Zelda Ocarina of Time - Song of Storms.mid', 'Tetris - Tetris Main Theme.mid', 'The-Final-Countdown.mid', 'Never-Gonna-Give-You-Up-3.mid']
+print(f"{len(clsm)} fichiers midi")
+for i in range(len(clsm)):
+    if os.path.exists(clsm[i]):
+        print(f"fichier midi {i + 1} touvé")
+    else:
+        print(f"fichier midi {i + 1 } manquant")
+midi_file = mido.MidiFile(f'/home/augustin/Téléchargements/{random.choice(clsm)}') # Sélectionne un fichier MIDI aléatoire parmi ceux de clsm
 audio_events = [] # Nouvelle liste pour stocker les événements audio
 
 # --- Global State ---
@@ -44,6 +54,9 @@ frozen_balls_positions = [] # Réintroduit pour stocker les balles gelées
 current_note = None
 frame_count = 0 # Variable globale pour suivre le nombre d'images enregistrées
 ball_escaped_time = None # Nouvelle variable pour le temps d'échappement de la balle
+
+
+
 
 # --- Initialization ---
 print("Initializing Pygame and peripherals...")
@@ -71,8 +84,6 @@ try:
     pygame.midi.init()
     output_id = pygame.midi.get_default_output_id()
     midi_out = pygame.midi.Output(output_id)
-    # IMPORTANT: Mettez à jour ce chemin vers votre fichier MIDI
-    midi_file = mido.MidiFile('/home/augustin/Documents/melodie.mid')
     notes = [(msg.note, msg.velocity) for msg in midi_file if msg.type == 'note_on' and msg.velocity > 0]
     note_index = 0
     midi_enabled = True
@@ -106,9 +117,6 @@ def play_midi_note():
             frequency = 440 * (2 ** ((note - 69) / 12))
             duration_s = 0.3  # Durée de la note en secondes
             amplitude = (velocity / 127.0) * 0.5 # Amplitude basée sur la vélocité
-
-            # Calcule le temps de début de la note basé sur les images enregistrées pour la synchronisation
-            # Ajoute un petit décalage (par exemple, 1 ou 2 images) pour que le son commence légèrement après la collision visuelle
             audio_start_frame_offset = 1 # Décalage en nombre d'images (vous pouvez ajuster cette valeur)
             start_time_s = (frame_count + audio_start_frame_offset) / VIDEO_FPS 
             audio_events.append({
@@ -450,9 +458,9 @@ while running:
         # Si la balle est échappée ou gelée, elle est gérée par les autres boucles de dessin ou ignorée ici.
 
     # Le texte reste visible quelle que soit l'animation des cercles
-    text_surface = font.render("Si la balle s'échappe,", True, (255, 255, 255))
+    text_surface = font.render(th, True, (255, 255, 255))
     screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, 50))
-    text_surface2 = font.render("la vidéo sera enregistrée", True, (255, 255, 255))
+    text_surface2 = font.render(tb, True, (255, 255, 255))
     screen.blit(text_surface2, (WIDTH // 2 - text_surface2.get_width() // 2, 100))
 
     pygame.display.flip()
