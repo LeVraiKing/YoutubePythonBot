@@ -33,7 +33,7 @@ video_writer = None
 final_video_path = "output.mp4"
 merged_video_path = "output_with_audio.mp4"
 sample_rate = 22050
-video_duration = 15  # Durée minimale souhaitée en secondes pour la vidéo (pour le redémarrage)
+video_duration = 35  # Durée minimale souhaitée en secondes pour la vidéo (pour le redémarrage)
 VIDEO_FPS = 60.0 # Fréquence d'images vidéo explicitement définie pour la synchronisation
 clsm = ['melodie.mid', 'Coldplay - Viva La Vida.mid', 'Fur Elise.mid', 'Jasper Folks - River Flows in You.mid', 'Alice Deejay - Better Off Alone.mid']
 print(f"{len(clsm)} fichiers midi")
@@ -449,9 +449,9 @@ while running:
         # Si la balle est échappée ou gelée, elle est gérée par les autres boucles de dessin ou ignorée ici.
 
     # Le texte reste visible quelle que soit l'animation des cercles
-    text_surface = font.render("Si la balle s'échappe,", True, (255, 255, 255))
+    text_surface = font.render(th, True, (255, 255, 255))
     screen.blit(text_surface, (WIDTH // 2 - text_surface.get_width() // 2, 50))
-    text_surface2 = font.render("la vidéo sera enregistrée", True, (255, 255, 255))
+    text_surface2 = font.render(tb, True, (255, 255, 255))
     screen.blit(text_surface2, (WIDTH // 2 - text_surface2.get_width() // 2, 100))
 
     pygame.display.flip()
