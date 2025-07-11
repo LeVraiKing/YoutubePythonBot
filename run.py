@@ -2,7 +2,7 @@ import os
 import subprocess
 
 nb = 200
-sf = 17  # Nombre de vidéos déjà créées
+sf = 83  # Nombre de vidéos déjà créées
 
 for i in range(sf, nb):
     subprocess.run(['python3', 'Bot.py'], check=True)
