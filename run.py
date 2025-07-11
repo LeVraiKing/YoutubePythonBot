@@ -3,7 +3,7 @@ import subprocess
 import shutil
 
 nb = 200 # Nombre de vidéos à créer
-sf = 103  # Nombre de vidéos déjà créées
+sf = 104  # Nombre de vidéos déjà créées
 
 for i in range(sf, nb):
     subprocess.run(['python3', 'Bot.py'], check=True)
