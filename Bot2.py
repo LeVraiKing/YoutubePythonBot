@@ -54,21 +54,16 @@ try:
     pygame.midi.init()
     output_id = pygame.midi.get_default_output_id()
     midi_out = pygame.midi.Output(output_id)
-    # Default to a simple MIDI file or create a basic note sequence
-    midi_files = ['Tetris - Tetris Main Theme.mid']
+    clsm = ['melodie.mid', 'Coldplay - Viva La Vida.mid', 'Fur Elise.mid', 'Jasper Folks - River Flows in You.mid', 'Alice Deejay - Better Off Alone.mid']
+    print(f"{len(clsm)} fichiers midi")
+    for i in range(len(clsm)):
+        if os.path.exists(clsm[i]):
+            print(f"fichier midi {i + 1} touvé")
+        else:
+            print(f"fichier midi {i + 1 } manquant")
+    midi_file = mido.MidiFile(f'{random.choice(clsm)}') # Sélectionne un fichier MIDI aléatoire parmi ceux de clsm
     midi_path = None
-    for file in midi_files:
-        if os.path.exists(f'/home/augustin/Téléchargements/{file}'):
-            midi_path = f'/home/augustin/Téléchargements/{file}'
-            break
-    
-    if midi_path:
-        midi_file = mido.MidiFile(midi_path)
-        notes = [(msg.note, msg.velocity) for msg in midi_file if msg.type == 'note_on' and msg.velocity > 0]
-    else:
-        # Create a simple C major scale as fallback
-        notes = [(60+i, 80) for i in range(8)] + [(60+i, 80) for i in range(7, -1, -1)]
-    
+    notes = [(msg.note, msg.velocity) for msg in midi_file if msg.type == 'note_on' and msg.velocity > 0]
     note_index = 0
     current_note = None
     midi_enabled = True
@@ -119,10 +114,10 @@ def play_midi_note():
         note, velocity = notes[note_index]
         
         # Play note on MIDI device if enabled
-        if midi_enabled:
-            midi_out.note_on(note, velocity)
-            current_note = (note, velocity)
-            pygame.time.set_timer(pygame.USEREVENT + 1, 300, True)  # Schedule note_off
+        #if midi_enabled:
+        #    midi_out.note_on(note, velocity)
+        #    current_note = (note, velocity)
+        #    pygame.time.set_timer(pygame.USEREVENT + 1, 300, True)  # Schedule note_off
 
         note_index = (note_index + 1) % len(notes)
 
